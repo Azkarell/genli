@@ -77,8 +77,7 @@ fn generate_dices(matches: &clap::ArgMatches<'_>, seed: u64) {
         None => vec![dice::DiceRoll{ dice_count: 1, dice_sides: 6, addition: 0}],
     };
 
-    let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
-
+    let mut rng =  <StdRng as SeedableRng>::seed_from_u64(seed);
     let mut sum = 0;
     for d in dices {
         let res = d.roll(&mut rng);
