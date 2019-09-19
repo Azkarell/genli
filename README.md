@@ -6,4 +6,4 @@ right now only genli dice works
 
 in future some other generation options might be added.
 
-this project is mostly intented to learn some rust.
+this project was wirtten mostly for fun.
