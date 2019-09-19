@@ -92,7 +92,7 @@ impl game::GameResult for DiceGameResult{
         for r in &self.results{
             let res = r.get_result();
             sum += res;
-            println!("(count: {}, sides: {}, addition: {},result: {})",r.dice_count,r.dice_sides,r.addition, res);
+            println!("{}",r);
         }
         println!("totalSum: {}", sum);
     }
