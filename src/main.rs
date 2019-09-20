@@ -6,15 +6,14 @@ mod dice;
 
 fn main() {
 
-    let ap = args::init_arg_parser();
-    let seed = ap.get_seed();
+    let ap = args::ArgParser::new();
     let game = ap.get_game();
     match game {
-        Some(val) => match val.as_ref().play(seed) {
-            Ok(res) => res.as_ref().print(),
+        Some(mut val) => match val.as_mut().play() {
+            Ok(_) => println!("Played!"),
             Err(err) => println!("{}",err)
         }
-        None => println!("No game selected or implemented!")
+        None => println!("Game not implemented or no game found!")
     }
 }
 

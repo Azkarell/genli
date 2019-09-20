@@ -27,6 +27,15 @@ impl DiceRoll {
     } 
 }
 
+
+impl fmt::Display for DiceRoll {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{}d{}+{}", self.dice_count, self.dice_sides, self.addition)
+    }
+}
+
+
+
 pub struct DiceResults {
     pub results: Vec<u64>,
     pub dice_count: u64,
@@ -43,17 +52,17 @@ impl DiceResults {
 
 impl fmt::Display for DiceResults {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-       return write!(f,"(count: {}, sides: {}, addition: {}, result: {})", self.dice_count,self.dice_sides, self.addition, self.get_result());
+       return write!(f,"({}d{}+{} : {})", self.dice_count,self.dice_sides, self.addition, self.get_result());
     }
 }
 
 
-pub fn is_valid_dice_arg(s: &str) -> bool {
+fn is_valid_dice_arg(s: &str) -> bool {
     let regex = get_dice_regex();
     return regex.is_match(&s);
 }
 
-pub fn dice_args_match(s: &str) -> Result<(), String> {
+fn dice_args_match(s: &str) -> Result<(), String> {
     if is_valid_dice_arg(s) {
         return Ok(());
     } else {
@@ -65,7 +74,8 @@ fn get_dice_regex() -> Regex {
     let regex = Regex::new("((?P<count>[1-9][0-9]*+)(w|d)(?P<sides>[1-9][0-9]*+))(\\+(?P<addition>[1-9][0-9]*+))*+").unwrap();
     return regex;
 }
-pub fn parse_dices(val: clap::Values) -> Vec<DiceRoll> {
+
+fn parse_dices(val: &Vec<&str>) -> Vec<DiceRoll> {
     let regex = get_dice_regex();
 
     let mut vec = Vec::new();
@@ -82,34 +92,59 @@ pub fn parse_dices(val: clap::Values) -> Vec<DiceRoll> {
     return vec;
 }
 
-pub struct DiceGameResult {
-    results : Vec<DiceResults>
+
+pub struct DiceGame {
+    dices: Vec<DiceRoll>,
+    rng: StdRng,
+    last_results: Vec<DiceResults>
 }
 
-impl game::GameResult for DiceGameResult{
-    fn print(&self){
-        let mut sum = 0;
-        for r in &self.results{
-            let res = r.get_result();
-            sum += res;
-            println!("{}",r);
+impl DiceGame {
+    pub fn new(seed: u64, dices: Vec<DiceRoll>) -> Self{
+        return DiceGame{ dices: dices, rng: get_rng(seed), last_results: Vec::new()}
+    }
+
+    pub fn use_seed(&mut self,seed: u64){
+        self.rng = get_rng(seed);
+    }
+
+    pub fn is_valid_dice_game(s: &str) -> Result<(),String>{
+        return dice_args_match(s);
+    }
+
+    pub fn from_game_args(seed: u64, args: &Vec<&str>) -> Self {
+        let dices = parse_dices(args);
+        return DiceGame::new(seed,dices);
+    }
+
+    fn print_welcome(&self){
+        println!("Your playing random dice game with: ");
+        for d in &self.dices {
+            println!("{}", d )
         }
-        println!("totalSum: {}", sum);
+    }
+
+    fn roll_dices(&mut self)
+    {
+        let mut vec = Vec::new();
+        let mut sum = 0;
+        for d in&self.dices{
+            let roll = d.roll(&mut self.rng);
+            let result = roll.get_result();
+            sum += result;
+            vec.push(roll);
+            println!("You've rolled a {} with {}",result,d);
+        }
+        println!("Total: {}", sum);
     }
 }
 
-pub struct DiceGame {
-    pub dices: Vec<DiceRoll>
-}
 
 impl game::Game for DiceGame {
-    fn play(&self, seed: u64) -> Result<Box<dyn game::GameResult>,String>{
-        let mut rng = get_rng(seed);
-        let mut results = Vec::new();
-        for d in &self.dices {
-            results.push(d.roll(&mut rng))
-        }
-        return Ok(Box::new( DiceGameResult{results: results} ))
+    fn play(&mut self) -> Result<(),String>{
+        self.print_welcome();
+        self.roll_dices();
+        return Ok(());
     }
 }
 
