@@ -10,9 +10,10 @@ use std::fmt;
 use super::game;
 
 pub struct DiceRoll {
-    pub dice_count: u64,
-    pub dice_sides: u64,
-    pub addition: u64
+    pub dice_count: i64,
+    pub dice_sides: i64,
+    pub addition: i64,
+    pub sign: i64
 }
 
 
@@ -23,36 +24,49 @@ impl DiceRoll {
             let die = Uniform::from(1..=self.dice_sides);
             dice_results.push( die.sample(rng));
         }
-        return DiceResults { addition: self.addition, dice_count: self.dice_count, results: dice_results, dice_sides: self.dice_sides };
+        return DiceResults { addition: self.addition, dice_count: self.dice_count, results: dice_results, dice_sides: self.dice_sides, sign: self.sign };
     } 
+    pub fn get_sign_as_str(&self) -> &str{
+        if self.sign < 0  {
+            return "-";
+        }else {
+            return "+";
+        }
+    }
 }
 
 
 impl fmt::Display for DiceRoll {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"{}d{}+{}", self.dice_count, self.dice_sides, self.addition)
+        write!(f,"{}d{}{}{}", self.dice_count, self.dice_sides, self.get_sign_as_str(), self.addition)
     }
 }
 
 
 
 pub struct DiceResults {
-    pub results: Vec<u64>,
-    pub dice_count: u64,
-    pub dice_sides: u64,
-    pub addition: u64
+    pub results: Vec<i64>,
+    pub dice_count: i64,
+    pub dice_sides: i64,
+    pub addition: i64,
+    pub sign: i64
 }
 
 impl DiceResults {
-    pub fn get_result(&self) -> u64 {
-        let res : u64 = self.results.iter().sum();
-        return self.addition + res;
+    pub fn get_result(&self) -> i64 {
+        let res : i64 = self.results.iter().sum();
+        return self.sign * self.addition + res;
     }
 }
 
 impl fmt::Display for DiceResults {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-       return write!(f,"({}d{}+{} : {})", self.dice_count,self.dice_sides, self.addition, self.get_result());
+        let mut sign = "+";
+        if self.sign < 0 {
+            sign = "-";
+        }
+        println!("{} {}", sign, self.sign);
+       return write!(f,"({count}d{sides}{sign}{addition} : {result})", count = self.dice_count, sides= self.dice_sides, addition= self.addition, result = self.get_result(), sign = sign);
     }
 }
 
@@ -71,7 +85,7 @@ fn dice_args_match(s: &str) -> Result<(), String> {
 }
 
 fn get_dice_regex() -> Regex {
-    let regex = Regex::new("((?P<count>[1-9][0-9]*+)(w|d)(?P<sides>[1-9][0-9]*+))(\\+(?P<addition>[1-9][0-9]*+))*+").unwrap();
+    let regex = Regex::new("((?P<count>[1-9][0-9]*+)(w|d)(?P<sides>[1-9][0-9]*+))((?P<sign>\\+|-)(?P<addition>[1-9][0-9]*+)){0,1}").unwrap();
     return regex;
 }
 
@@ -82,10 +96,15 @@ fn parse_dices(val: &Vec<&str>) -> Vec<DiceRoll> {
     for v in val {
         let iter = regex.captures_iter(v);
         for c in iter {
-            let dice_count = c.name("count").map_or(0u64, |m| m.as_str().parse().unwrap());
-            let dice_sides = c.name("sides").map_or(0u64, |m| m.as_str().parse().unwrap());
-            let addition = c.name("addition").map_or(0u64, |m| m.as_str().parse().unwrap());
-            vec.push(DiceRoll{ dice_count: dice_count, dice_sides: dice_sides, addition: addition });
+            let dice_count = c.name("count").map_or(0i64, |m| m.as_str().parse().unwrap());
+            let dice_sides = c.name("sides").map_or(0i64, |m| m.as_str().parse().unwrap());
+            let addition = c.name("addition").map_or(0i64, |m| m.as_str().parse().unwrap());
+            let sign = c.name("sign").map_or(1i64, |m| match m.as_str() {
+                "+" => 1i64,
+                "-" => -1i64,
+                &_ => 1i64
+            });
+            vec.push(DiceRoll{ dice_count: dice_count, dice_sides: dice_sides, addition: addition, sign: sign });
         }
     }
 
