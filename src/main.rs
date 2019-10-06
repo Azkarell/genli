@@ -2,7 +2,7 @@
 
 mod args;
 mod game;
-mod dice;
+
 
 fn main() {
 
@@ -10,7 +10,7 @@ fn main() {
     let game = ap.get_game();
     match game {
         Some(mut val) => match val.as_mut().play() {
-            Ok(_) => println!("Played!"),
+            Ok(_) => println!("{} played!", val.name()),
             Err(err) => println!("{}",err)
         }
         None => println!("Game not implemented or no game found!")

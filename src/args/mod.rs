@@ -3,8 +3,7 @@ extern crate rand;
 
 use rand::{Rng};
 use super::game;
-use super::dice;
-
+use super::game::dice;
 use clap::{App, Arg, SubCommand, AppSettings};
 use std::iter::FromIterator;
 
@@ -22,7 +21,7 @@ impl ArgParser {
         };
 
         return match self.matches.subcommand_matches("dice") {
-            Some(mymatch) => Some(Box::new(dice::DiceGame::from_game_args(seed, &map_dice_game_args(&mymatch)))),
+            Some(mymatch) => Some(Box::new(dice::dicegame::DiceGame::from_game_args(seed, &map_dice_game_args(&mymatch)))),
             None => None
         };
     }
@@ -52,7 +51,26 @@ fn init_arg_parser() -> ArgParser {
                 .help("use specific seed"),
         )
         .subcommand(
-            SubCommand::with_name("name").about("Generates a name").arg(
+           generate_name_args()
+        )
+        .subcommand(
+            generate_dice_args()
+        )
+        .get_matches();
+    return ArgParser{matches: matches};
+}
+
+fn generate_dice_args<'a,'b>() -> clap::App<'a,'b> {
+  return SubCommand::with_name("dice").about("rolls a dices").arg(
+                Arg::with_name("DICES")
+                    .takes_value(true)
+                    .validator(|n| dice::dicegame::DiceGame::is_valid_dice_game(&n))
+                    .multiple(true),
+            )
+}
+
+fn generate_name_args<'a,'b>() -> clap::App<'a,'b> {
+    SubCommand::with_name("name").about("Generates a name").arg(
                 Arg::with_name("gender")
                     .takes_value(true)
                     .short("g")
@@ -61,20 +79,8 @@ fn init_arg_parser() -> ArgParser {
                     .possible_values(&vec!["m","f","b"])
                     .default_value("b")
                     .required(false),
-            ),
-        )
-        .subcommand(
-            SubCommand::with_name("dice").about("rolls a dices").arg(
-                Arg::with_name("DICES")
-                    .takes_value(true)
-                    .validator(|n| dice::DiceGame::is_valid_dice_game(&n))
-                    .multiple(true),
-            ),
-        )
-        .get_matches();
-    return ArgParser{matches: matches};
+            )
 }
-
 
 fn generate_seed() -> u64 {
     let mut rng = rand::thread_rng();
@@ -88,13 +94,6 @@ fn map_dice_game_args<'a>(matches: &'a clap::ArgMatches<'a>) -> Vec<&'a str> {
     };
 }
 
-// fn generate_dices(matches: &clap::ArgMatches<'_>) -> Vec<dice::DiceRoll> {
-//     let dices = match matches.values_of("DICES") {
-//         Some(val) => dice::parse_dices(val),
-//         None => vec![dice::DiceRoll{ dice_count: 1, dice_sides: 6, addition: 0}],
-//     };
-//     return dices;
-// }
 
 
 
