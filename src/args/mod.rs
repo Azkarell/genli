@@ -4,6 +4,7 @@ extern crate rand;
 use rand::{Rng};
 use super::game;
 use super::game::dice;
+use super::game::map;
 use clap::{App, Arg, SubCommand, AppSettings};
 use std::iter::FromIterator;
 
@@ -14,16 +15,19 @@ pub struct ArgParser {
 impl ArgParser {
 
 
-    pub fn get_game(&self) -> Option<Box<dyn game::Game>> {
+    pub fn get_game(&self) -> Option<Box<dyn game::Game<Err=String>>> {
         let seed = match self.matches.value_of("seed") {
             Some(val) => val.parse().unwrap(),
             None => generate_seed()
         };
+        if let Some(dice_args) = self.matches.subcommand_matches("dice"){
+            return Some(Box::new(dice::dicegame::DiceGame::from_game_args(seed, &map_dice_game_args(&dice_args))));
+        }
+        if let Some(map_args) = self.matches.subcommand_matches("map"){
+            return Some(Box::new(map::mapgame::MapGame::from_game_args(seed, &map_map_game_args(&map_args))))
+        }
 
-        return match self.matches.subcommand_matches("dice") {
-            Some(mymatch) => Some(Box::new(dice::dicegame::DiceGame::from_game_args(seed, &map_dice_game_args(&mymatch)))),
-            None => None
-        };
+        None
     }
 
     pub fn new() -> Self {
@@ -56,6 +60,9 @@ fn init_arg_parser() -> ArgParser {
         .subcommand(
             generate_dice_args()
         )
+        .subcommand(
+            generate_map_args()
+        )
         .get_matches();
     return ArgParser{matches: matches};
 }
@@ -82,6 +89,17 @@ fn generate_name_args<'a,'b>() -> clap::App<'a,'b> {
             )
 }
 
+fn generate_map_args<'a,'b>() -> clap::App<'a,'b> {
+    SubCommand::with_name("map")
+            .about("Generates a map")
+            .arg(
+                Arg::with_name("SIZE")
+                    .takes_value(true)
+                    .validator(|n| map::is_valid_map_game(&n))
+                    .multiple(true),
+            )
+}
+
 fn generate_seed() -> u64 {
     let mut rng = rand::thread_rng();
     return rng.gen();
@@ -94,6 +112,12 @@ fn map_dice_game_args<'a>(matches: &'a clap::ArgMatches<'a>) -> Vec<&'a str> {
     };
 }
 
+fn map_map_game_args<'a>(matches: &'a clap::ArgMatches<'a>) -> Vec<&'a str> {
+    match matches.values_of("SIZE") {
+        Some(val) => Vec::from_iter(val),
+        None => vec!["200", "200"]
+    }
+}
 
 
 

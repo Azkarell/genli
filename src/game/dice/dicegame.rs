@@ -1,5 +1,6 @@
 use super::diceresults::DiceResults;
 use super::diceroll::DiceRoll;
+use super::super::Game;
 use rand::rngs::StdRng;
 
 #[derive(Debug)]
@@ -14,14 +15,14 @@ impl DiceGame {
     pub fn new(seed: u64, dices: Vec<DiceRoll>) -> Self {
         return DiceGame {
             dices: dices,
-            rng: super::get_rng(seed),
+            rng: super::super::get_rng(seed),
             last_results: Vec::new(),
             name: "DiceGame".to_owned()
         };
     }
 
     pub fn use_seed(&mut self, seed: u64) {
-        self.rng = super::get_rng(seed);
+        self.rng = super::super::get_rng(seed);
     }
 
     pub fn is_valid_dice_game(s: &str) -> Result<(), String> {
@@ -48,16 +49,28 @@ impl DiceGame {
     }
 }
 
-impl super::super::Game for DiceGame {
+impl Game for DiceGame {
     fn play(&mut self) -> Result<(), String> {
         // self.print_welcome();
         self.roll_dices();
-        return Ok(());
+        Ok(())
     }
     fn name(&self) -> &str{
-        return &self.name;
+        &self.name
     }
 }
+
+impl dialoguer::Validator for DiceGame{
+    type Err = String;
+    fn validate(&self, text: &str )-> Result<(),String>{
+        if super::is_valid_dice_arg(text) {
+            Ok(())
+        } else {
+            Err(String::from("Invalid input!"))
+        }
+    }
+}
+
 
 fn parse_dices(val: &Vec<&str>) -> Vec<DiceRoll> {
     let regex = super::get_dice_regex();

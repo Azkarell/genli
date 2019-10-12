@@ -1,8 +1,7 @@
 extern crate rand;
 extern crate regex;
 
-use rand::rngs::StdRng;
-use rand::{SeedableRng};
+
 use regex::Regex;
 
 pub mod dicegame;
@@ -29,6 +28,4 @@ fn get_dice_regex() -> Regex {
 
 
 
-fn get_rng(seed: u64) -> StdRng {
-    return <StdRng as SeedableRng>::seed_from_u64(seed);
-}
+
