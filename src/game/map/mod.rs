@@ -1,10 +1,11 @@
 
-
 pub mod mapgame; 
+
 mod map;
 mod mapgen;
+
 pub fn is_valid_map_arg(s: &str) -> bool{
-    true
+    s.parse::<u64>().is_ok()
 }
 
 pub fn is_valid_map_game(s: &str) -> Result<(), String> {
@@ -14,3 +15,4 @@ pub fn is_valid_map_game(s: &str) -> Result<(), String> {
         return Err("valid arguments: e.g 200 200".to_string());
     }
 }
+

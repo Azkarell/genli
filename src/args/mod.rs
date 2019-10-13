@@ -1,7 +1,6 @@
 extern crate clap;
 extern crate rand;
 
-use rand::{Rng};
 use super::game;
 use super::game::dice;
 use super::game::map;
@@ -18,7 +17,7 @@ impl ArgParser {
     pub fn get_game(&self) -> Option<Box<dyn game::Game<Err=String>>> {
         let seed = match self.matches.value_of("seed") {
             Some(val) => val.parse().unwrap(),
-            None => generate_seed()
+            None => super::game::generate_seed()
         };
         if let Some(dice_args) = self.matches.subcommand_matches("dice"){
             return Some(Box::new(dice::dicegame::DiceGame::from_game_args(seed, &map_dice_game_args(&dice_args))));
@@ -96,14 +95,13 @@ fn generate_map_args<'a,'b>() -> clap::App<'a,'b> {
                 Arg::with_name("SIZE")
                     .takes_value(true)
                     .validator(|n| map::is_valid_map_game(&n))
+                    .max_values(2)
+                    .min_values(2)
                     .multiple(true),
             )
 }
 
-fn generate_seed() -> u64 {
-    let mut rng = rand::thread_rng();
-    return rng.gen();
-}
+
 
 fn map_dice_game_args<'a>(matches: &'a clap::ArgMatches<'a>) -> Vec<&'a str> {
     return match matches.values_of("DICES") {

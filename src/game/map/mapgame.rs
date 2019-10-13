@@ -3,9 +3,8 @@ extern crate graphics;
 extern crate opengl_graphics;
 extern crate piston;
 
-use core::cmp::Ordering::Equal;
+use piston::Button::Keyboard;
 use super::super::Game;
-use super::map::{Map,TileData};
 use super::mapgen::MapGen;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
@@ -13,16 +12,18 @@ use piston::event_loop::*;
 use piston::input::*;
 use piston::window::WindowSettings;
 
-const WHITE: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 
 pub struct MapGame {
     gl: glutin_window::OpenGL,
-    mapdata: Map,
+    gen: MapGen,
+    draw: Box<dyn Fn(graphics::Context,&mut opengl_graphics::GlGraphics)>
 }
 
 impl Game for MapGame {
     fn play(&mut self) -> Result<(), String> {
-        let mut window: Window = WindowSettings::new("spinning-square", [600, 600])
+        self.gen.restart();
+        self.draw = self.gen.next();
+        let mut window: Window = WindowSettings::new("MapGame", [600, 600])
             .graphics_api(self.gl)
             .exit_on_esc(true)
             .build()
@@ -36,6 +37,14 @@ impl Game for MapGame {
 
             if let Some(u) = e.update_args() {
                 self.update(&u);
+            }
+            if let Some(r) = e.release_args(){
+                if let Keyboard(k) = r {
+                    match k {
+                        Key::Return => self.draw = self.next(),
+                        _ => ()
+                    };
+                }
             }
         }
         Ok(())
@@ -58,56 +67,27 @@ impl dialoguer::Validator for MapGame {
 
 impl MapGame {
     fn render(&mut self, args: &RenderArgs) {
-        use graphics::*;
 
         let mut gl = GlGraphics::new(self.gl);
 
+        gl.draw(args.viewport(), &self.draw);
+    }
 
-        let width = self.mapdata.width();
-        let height = self.mapdata.height();
-
-        let square_size_x = args.window_size[0] / width as f64;
-        let square_size_y = args.window_size[1] / height as f64;
-
-
-        let mut floats = vec![square_size_x, square_size_y ];
-        floats.sort_by(|a,b| a.partial_cmp(b).unwrap_or(Equal));
-        let size = floats[0];
-        let square = rectangle::square(0.0, 0.0, size);
-
-        let mut map = self.mapdata.clone();
-
-        gl.draw(args.viewport(), |c, gl| {
-            // Clear the screen.
-            clear(WHITE, gl);
-            for x in 0 .. width {
-                for y in 0 .. height {
-                let transform = c
-                            .transform
-                            .trans(x as f64 * size , y as f64 * size);
-                        let color = match map.tile_data(x,y){
-                           TileData::Valid{ color } => color,
-                           _ => panic!()
-                        };
-                        // Draw a box rotating around the middle of the screen.
-                        rectangle(color, square, transform, gl);
-                }
-            }
-        
-        });
+    fn next(&mut self) ->  Box<dyn Fn(graphics::Context, &mut opengl_graphics::GlGraphics)>{
+        self.gen.next()
     }
 
     pub fn new(seed: u64, width: u64, height: u64) -> Self {
         let mut gen = MapGen::new(seed, width, height);
-        let map = gen.generate();
         let opengl = OpenGL::V4_5;
         MapGame {
             gl: opengl,
-            mapdata: map,
+            draw: gen.next(),
+            gen: gen
         }
     }
     pub fn from_game_args(seed: u64, args: &Vec<&str>) -> Self {
-        MapGame::new(seed, 200, 200)
+        MapGame::new(seed, args[0].parse().expect("not a number"), args[1].parse().expect("not a number"))
     }
     fn update(&mut self, args: &UpdateArgs) {
         // Rotate 2 radians per second.
