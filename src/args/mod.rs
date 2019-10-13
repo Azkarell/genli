@@ -113,7 +113,7 @@ fn map_dice_game_args<'a>(matches: &'a clap::ArgMatches<'a>) -> Vec<&'a str> {
 fn map_map_game_args<'a>(matches: &'a clap::ArgMatches<'a>) -> Vec<&'a str> {
     match matches.values_of("SIZE") {
         Some(val) => Vec::from_iter(val),
-        None => vec!["200", "200"]
+        None => vec!["600", "600"]
     }
 }
 

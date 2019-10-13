@@ -11,6 +11,7 @@ pub enum GenState{
     Start,
     Points(Vec<Point>),
     Voronoi(DCEL, Vec<Point>),
+
     End
 }
 
@@ -21,6 +22,8 @@ pub struct MapGen {
     state: GenState,
     seed: u64
 }
+
+
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const GREY: [f32; 4] = [0.75, 0.75, 0.75, 1.0];
 const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
@@ -53,7 +56,7 @@ impl MapGen {
 
     pub fn next(&mut self)-> Box<dyn Fn(graphics::Context, &mut opengl_graphics::GlGraphics)> {
         super::super::super::println_with_color( "next",console::Color::Red);
-        match &self.state {
+        match  &self.state {
             GenState::Start => {
                 let points = gen_points(self.width, self.height,&mut self.rng);
                 self.state = GenState::Points(points.clone());
@@ -69,10 +72,11 @@ impl MapGen {
             },
             GenState::Points(points) => {
                 let copy = points.clone();
-                let dcel = voronoi(points.clone(), self.width.max(self.height) as f64);
+                let relaxed = voronoi::lloyd_relaxation(copy, self.width.max(self.height) as f64);
+                let dcel = voronoi(relaxed.clone(), self.width.max(self.height) as f64);
                 let lines =  make_line_segments(&dcel);
-                let draw = copy.clone();
-                self.state = GenState::Voronoi(dcel, copy);
+                let draw = relaxed.clone();
+                self.state = GenState::Voronoi(dcel, relaxed);
                 Box::new(move |c, gl|{
                     use graphics::*;
                     clear(WHITE, gl);
@@ -85,7 +89,25 @@ impl MapGen {
                         line_from_to(BLUE, 1.0, [l[0].x.into(),l[0].y.into()], [l[1].x.into(),l[1].y.into()], c.transform, gl)
                     }
                 })
-            }
+            },
+            GenState::Voronoi(ref dcel, ref points) => {
+                let polygons = voronoi::make_polygons(&dcel);
+                let colors : Vec<[f32;4]> = polygons.iter().map(|_| { get_random_color()}).collect();
+                self.state = GenState::End;
+                Box::new(move |c, gl|{
+                        use graphics::*;
+                        clear(WHITE, gl);
+                        let mut i = 0;
+                    for p in polygons.iter(){
+                        let mut vec = Vec::new();
+                        for po in p.iter(){
+                            vec.push([po.x.into(),po.y.into()]);
+                        }
+                        polygon(colors[i], &vec , c.transform, gl);
+                        i += 1;
+                    }
+                })
+            },
             _ => Box::new(move |c,gl|{
                 
             })
@@ -98,6 +120,20 @@ impl MapGen {
         self.rng = super::super::get_rng(self.seed)
     }
 }
+
+
+fn get_random_color() -> [f32;4]{
+    let mut rng = rand::thread_rng();
+    let val = rng.gen_range(0,4);
+    match val {
+        0 => GREEN,
+        1 => BLACK,
+        2 => BLUE,
+        3 => GREY,
+        _ => WHITE
+    }
+}
+
 
 
 
